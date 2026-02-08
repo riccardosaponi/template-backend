@@ -1,0 +1,338 @@
+openapi: 3.0.3
+info:
+  title: Backend Template API
+  version: 0.1.0
+  description: Generic backend template with entity management
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /api/health:
+    get:
+      tags: [System]
+      summary: Health check endpoint
+      description: Returns service health status with timestamp and service information. Useful for monitoring and load balancers.
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy and operational
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+              examples:
+                healthy:
+                  summary: Healthy response
+                  value:
+                    status: UP
+                    timestamp: "2024-02-08T10:15:30.123Z"
+                    service: nomecliente-backend
+
+  # --- Generic Entity CRUD endpoints ---
+  /api/v1/entities:
+    post:
+      tags: [Entities]
+      summary: Create a new entity
+      description: Creates a new generic entity with code and description.
+      operationId: createEntity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGenericEntityRequest'
+            examples:
+              example1:
+                summary: Create entity
+                value:
+                  code: "ENT001"
+                  description: "First entity"
+      responses:
+        '201':
+          description: Entity created successfully
+          headers:
+            Location:
+              schema:
+                type: string
+              description: URI of the created entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericEntityDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+    get:
+      tags: [Entities]
+      summary: List entities
+      description: Lists all entities with pagination and sorting.
+      operationId: listEntities
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 0
+          description: Page number (0-based)
+        - in: query
+          name: size
+          schema:
+            type: integer
+            default: 20
+          description: Page size
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+            default: code
+          description: Field to sort by (code, description, createDate)
+        - in: query
+          name: sortDirection
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+          description: Sort direction
+      responses:
+        '200':
+          description: List of entities
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageGenericEntityDto'
+
+  /api/v1/entities/{id}:
+    get:
+      tags: [Entities]
+      summary: Get entity by ID
+      description: Retrieves entity details by ID.
+      operationId: getEntity
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Entity ID
+      responses:
+        '200':
+          description: Entity found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericEntityDto'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Entities]
+      summary: Update an entity
+      description: Updates an existing entity's code and description.
+      operationId: updateEntity
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Entity ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGenericEntityRequest'
+            examples:
+              example1:
+                summary: Update entity
+                value:
+                  code: "ENT001-UPDATED"
+                  description: "Updated description"
+      responses:
+        '200':
+          description: Entity updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericEntityDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Entities]
+      summary: Delete an entity
+      description: Performs a logical delete (sets canceled=true) on the entity.
+      operationId: deleteEntity
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Entity ID
+      responses:
+        '204':
+          description: Entity deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  schemas:
+    HealthCheckResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: UP
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-02-08T10:15:30.123Z"
+        service:
+          type: string
+          example: nomecliente-backend
+      required: [status, timestamp, service]
+
+    GenericEntityDto:
+      type: object
+      description: Generic entity representation
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Entity unique identifier
+        code:
+          type: string
+          maxLength: 50
+          description: Entity code (unique)
+          example: "ENT001"
+        description:
+          type: string
+          maxLength: 255
+          description: Entity description
+          example: "First entity"
+        createDate:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        createUser:
+          type: string
+          maxLength: 128
+          description: User who created the entity
+        lastUpdateDate:
+          type: string
+          format: date-time
+          nullable: true
+          description: Last update timestamp
+        lastUpdateUser:
+          type: string
+          maxLength: 128
+          nullable: true
+          description: User who last updated the entity
+        canceled:
+          type: boolean
+          description: Whether the entity is logically deleted
+          default: false
+      required: [id, code, description, createDate, createUser, canceled]
+
+    CreateGenericEntityRequest:
+      type: object
+      description: Request to create a new entity
+      properties:
+        code:
+          type: string
+          maxLength: 50
+          description: Entity code (must be unique)
+          example: "ENT001"
+        description:
+          type: string
+          maxLength: 255
+          description: Entity description
+          example: "First entity"
+      required: [code, description]
+
+    UpdateGenericEntityRequest:
+      type: object
+      description: Request to update an entity
+      properties:
+        code:
+          type: string
+          maxLength: 50
+          description: Entity code
+          example: "ENT001-UPDATED"
+        description:
+          type: string
+          maxLength: 255
+          description: Entity description
+          example: "Updated description"
+      required: [code, description]
+
+    PageGenericEntityDto:
+      type: object
+      description: Paginated list of entities
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/GenericEntityDto'
+        pageable:
+          type: object
+          properties:
+            pageNumber:
+              type: integer
+            pageSize:
+              type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+
+    ErrorDetail:
+      type: object
+      properties:
+        field:
+          type: string
+        issue:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorDetail'
+        correlationId:
+          type: string
+      required: [code, message]
+
+  responses:
+    BadRequest:
+      description: Bad request - validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+

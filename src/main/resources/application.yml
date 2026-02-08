@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: ${SPRING_APPLICATION_NAME:backend-template}
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/template_db}
+    username: ${SPRING_DATASOURCE_USERNAME:template_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:template_pass}
+    hikari:
+      maximum-pool-size: ${SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE:10}
+      minimum-idle: ${SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE:5}
+      connection-timeout: ${SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT:30000}
+  jpa:
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:none}
+    properties:
+      hibernate:
+        dialect: ${SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT:org.hibernate.dialect.PostgreSQLDialect}
+    show-sql: ${SPRING_JPA_SHOW_SQL:false}
+  liquibase:
+    change-log: ${SPRING_LIQUIBASE_CHANGE_LOG:classpath:db/changelog/db.changelog-master.yaml}
+    enabled: ${SPRING_LIQUIBASE_ENABLED:true}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:http://localhost:8180/realms/nomecliente}
+          jwk-set-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI:http://localhost:8180/realms/nomecliente/protocol/openid-connect/certs}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: ${MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE:health,info}
+      base-path: ${MANAGEMENT_ENDPOINTS_WEB_BASE_PATH:/actuator}
+  endpoint:
+    health:
+      show-details: ${MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS:when-authorized}
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: ${SERVER_SHUTDOWN:graceful}
+
+logging:
+  level:
+    root: ${LOGGING_LEVEL_ROOT:INFO}
+    it.quix.nomecliente: ${LOGGING_LEVEL_APP:DEBUG}

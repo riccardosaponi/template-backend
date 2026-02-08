@@ -1,0 +1,12 @@
+spring:
+  liquibase:
+    enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+
+logging:
+  level:
+    root: INFO
+    it.quix.nomecliente: DEBUG
