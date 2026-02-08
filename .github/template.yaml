@@ -1,0 +1,26 @@
+name: Spring Boot Hexagonal Architecture Template
+description: Template Spring Boot con architettura esagonale, Keycloak JWT, gestione errori centralizzata
+labels:
+  - spring-boot
+  - hexagonal-architecture
+  - clean-architecture
+  - keycloak
+  - jwt
+  - template
+
+# Parametri richiesti durante la creazione
+parameters:
+  - name: client_name
+    description: Nome del cliente (es. acme, tesla, spacex)
+    required: truepattern: "^[a-z][a-z0-9]*$"
+
+  - name: project_name
+    description: Nome del progetto (es. backend, api, core)
+    required: true
+    pattern: "^[a-z][a-z0-9]*$"
+
+  - name: keycloak_realm
+    description: Nome del realm Keycloak
+    required: false
+    default: "{{client_name}}"
+
