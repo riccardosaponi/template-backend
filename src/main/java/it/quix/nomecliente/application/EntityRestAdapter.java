@@ -10,14 +10,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import it.quix.nomecliente.domain.ddd.dto.CreateEntityRequestDTO;
 import it.quix.nomecliente.domain.ddd.dto.EntityDTO;
 import it.quix.nomecliente.domain.ddd.dto.UpdateEntityRequestDTO;
+import it.quix.nomecliente.domain.ddd.enumeration.EntitySortField;
 import it.quix.nomecliente.domain.port.in.*;
 import it.quix.nomecliente.domain.usecase.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -102,14 +101,16 @@ public class EntityRestAdapter implements
             content = @Content(schema = @Schema(implementation = Page.class))
         )
     })
-    public Page<EntityDTO> listEntities(
-        @RequestParam(defaultValue = "0") @Parameter(description = "Page number (0-based)") int page,
-        @RequestParam(defaultValue = "20") @Parameter(description = "Page size") int size,
-        @RequestParam(defaultValue = "code") @Parameter(description = "Sort by field") String sortBy,
-        @RequestParam(defaultValue = "asc") @Parameter(description = "Sort direction (asc/desc)") String sortDirection
-    ) {
-        Sort.Direction direction = sortDirection.equalsIgnoreCase("desc") ? Sort.Direction.DESC : Sort.Direction.ASC;
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+    public Page<EntityDTO> listEntities(Pageable pageable) {
+        pageable.getSort().forEach(order -> {
+            if (!EntitySortField.isValid(order.getProperty())) {
+                throw new IllegalArgumentException(
+                    "Invalid sort field: '" + order.getProperty() + "'. " +
+                    "Allowed fields: code, description, createDate, createUser, " +
+                    "lastUpdateDate, lastUpdateUser, canceled"
+                );
+            }
+        });
         return listEntitiesUseCase.execute(pageable);
     }
 

@@ -63,6 +63,7 @@ Spring beans wiring / configuration.
 ## Documentation
 - **[AGENTS.md](AGENTS.md)** - Development workflow and repo conventions
 - **[docs/architecture.md](docs/architecture.md)** - Hexagonal architecture structure
+- **[docs/hexagonal-pattern.md](docs/hexagonal-pattern.md)** - IN & OUT ports pattern with examples
 - **[docs/error-model.md](docs/error-model.md)** - Error handling standards
 - **[docs/testing-strategy.md](docs/testing-strategy.md)** - Testing guidelines
 - **[docs/openapi-guidelines.md](docs/openapi-guidelines.md)** - REST API conventions
@@ -92,10 +93,15 @@ Spring beans wiring / configuration.
 - **Security**: [docs/security-keycloak.md](docs/security-keycloak.md)
 
 ## Quickstart
-1. Start PostgreSQL:
+1. Start PostgreSQL only (minimal):
    ```bash
    docker compose up -d
    ```
+2. Start full stack (Keycloak + WireMock + Mailpit + nginx HTTPS):
+   ```bash
+   cd infra && docker compose up -d
+   ```
+   See **[infra/README.md](infra/README.md)** for credentials, ports and configuration.
 2. Run the service:
    ```bash
    ./mvnw spring-boot:run

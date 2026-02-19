@@ -12,7 +12,8 @@ labels:
 parameters:
   - name: client_name
     description: Nome del cliente (es. acme, tesla, spacex)
-    required: truepattern: "^[a-z][a-z0-9]*$"
+    required: true
+    pattern: "^[a-z][a-z0-9]*$"
 
   - name: project_name
     description: Nome del progetto (es. backend, api, core)
@@ -23,4 +24,3 @@ parameters:
     description: Nome del realm Keycloak
     required: false
     default: "{{client_name}}"
-

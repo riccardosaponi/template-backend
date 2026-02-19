@@ -1,0 +1,18 @@
+[req]
+default_bits       = 4096
+default_md         = sha256
+prompt             = no
+distinguished_name = dn
+x509_extensions    = san
+
+[dn]
+CN = localhost
+O  = nomecliente Dev
+C  = IT
+
+[san]
+subjectAltName   = DNS:localhost,DNS:keycloak,DNS:wiremock,DNS:mailpit,IP:127.0.0.1
+keyUsage         = digitalSignature,keyEncipherment
+extendedKeyUsage = serverAuth
+basicConstraints = CA:FALSE
+

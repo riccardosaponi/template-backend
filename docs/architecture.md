@@ -4,7 +4,7 @@
 - Standardized backend skeleton for rapid project bootstrapping
 - Contract-first APIs (OpenAPI)
 - Deterministic schema evolution (Liquibase)
-- Deterministic automated tests (unit + integration with Testcontainers)
+- Deterministic automated tests (integration with Testcontainers)
 
 ## Hexagonal architecture
 
@@ -19,7 +19,7 @@
 ```java
 @RestController
 @RequestMapping("/api/v1/entities")
-public class EntityRestAdapter implements CreateEntityPortIn, GetEntityPortIn, ... {
+public class EntityRestAdapter implements CreateEntityIn, GetEntityIn, ... {
     
     private final CreateEntityUseCase createEntityUseCase;
     
@@ -37,7 +37,7 @@ public class EntityRestAdapter implements CreateEntityPortIn, GetEntityPortIn, .
 
 - **IN ports** (`domain.port.in`): 
   - Interfaces defining the **REST API contract**.
-  - One interface per operation (e.g., `CreateEntityPortIn`, `GetEntityPortIn`).
+  - One interface per operation (e.g., `CreateEntityIn`, `GetEntityIn`).
   - Method signatures **MUST match** the REST adapter public methods (same parameters, same return type).
   - For operations returning HTTP 201 Created, use `ResponseEntity<T>` as return type.
   - For pagination, use individual parameters (`int page, int size, String sortBy, String sortDirection`) not `Pageable`.

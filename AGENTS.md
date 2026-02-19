@@ -16,8 +16,7 @@ This template uses a **single** `src/main/resources/application.yml`.
 All runtime settings are controlled via environment variables with defaults.
 
 ## Quick commands
-- Unit tests: `./mvnw -q test`
-- Integration tests (PostgreSQL via Testcontainers): `./mvnw -q -Pintegration test`
+- Tests + coverage check (PostgreSQL via Testcontainers): `./mvnw -q verify`
 - Run locally with docker-compose Postgres: `./mvnw spring-boot:run`
 
 ## Hexagonal architecture map (repo conventions)
@@ -71,14 +70,11 @@ All code must be in English (identifiers, comments, docs).
 
 ## Test strategy (mandatory)
 
-### Unit tests
-- Focus on business rules in `domain.usecase.*Impl`.
-- Prefer pure unit tests (no Spring context) for use cases.
-
 ### Integration tests
 - Use Spring Boot context + PostgreSQL via Testcontainers.
 - Liquibase must apply schema from scratch.
 - Use MockMvc to test endpoints.
+- All use cases must be covered (success path, validation, authorization, domain edge cases).
 
 ### External systems
 - Do not call live systems in CI.
@@ -182,8 +178,7 @@ Deliverables
    - Add OpenAPI annotations as defined in `docs/openapi-guidelines.md`.
 
 Quality gates (must be green)
-- `mvn test`
-- `mvn -Pintegration test`
+- `mvn verify`
 
 Output
 - Provide a short summary of what you changed and where (paths + why).

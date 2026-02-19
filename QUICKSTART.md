@@ -36,6 +36,25 @@ docker compose up -d
 ./mvnw spring-boot:run
 ```
 
+## Full local stack (Keycloak + WireMock + Mailpit + nginx HTTPS)
+
+```bash
+cd infra && docker compose up -d
+```
+
+Services started:
+
+| Service | URL |
+|---|---|
+| PostgreSQL 17 | `localhost:5432` |
+| Keycloak admin | `http://localhost:8180/admin` (admin/admin) |
+| Keycloak HTTPS | `https://localhost:8443` |
+| WireMock | `http://localhost:9090/__admin/ui` |
+| Mailpit | `http://localhost:8025` |
+| Hub (index) | `http://localhost:80` |
+
+See [`infra/README.md`](infra/README.md) for full documentation.
+
 Health:
 - `GET http://localhost:8080/actuator/health`
 - `GET http://localhost:8080/api/health`

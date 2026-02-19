@@ -14,9 +14,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
           cache: 'maven'
-      - name: Unit tests
-        run: ./mvnw -q test
-      - name: Integration tests (Testcontainers)
-        run: ./mvnw -q -Pintegration test
+      - name: Test & coverage check
+        run: ./mvnw -q verify

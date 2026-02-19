@@ -1,0 +1,17 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/external-api/sample"
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "example-response.json",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  },
+  "metadata": {
+    "description": "Example mock for an external GET endpoint. Copy this file and adjust request/response to mock real external services."
+  }
+}
+

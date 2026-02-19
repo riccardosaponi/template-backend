@@ -1,0 +1,7 @@
+{
+  "id": "sample-001",
+  "name": "Sample External Resource",
+  "status": "active",
+  "description": "This is a mock response served by WireMock. Replace with your actual external service payload."
+}
+

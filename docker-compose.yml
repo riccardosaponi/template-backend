@@ -1,6 +1,11 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Minimal quick-start: PostgreSQL only.
+# For the full local stack (Keycloak, nginx HTTPS, WireMock, Mailpit) see infra/
+#   cd infra && ./scripts/start.sh
+# ─────────────────────────────────────────────────────────────────────────────
 services:
   postgres:
-    image: postgres:16
+    image: postgres:17
     container_name: backend_template_postgres
     environment:
       POSTGRES_DB: template_db

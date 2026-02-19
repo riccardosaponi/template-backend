@@ -9,7 +9,5 @@
 - [ ] Liquibase changeset added/updated (if schema changed)
 
 ## Tests / DoD
-- [ ] Unit tests added/updated
 - [ ] Integration tests added/updated (Testcontainers)
-- [ ] `./mvnw test` passes
-- [ ] `./mvnw -Pintegration test` passes
+- [ ] `./mvnw verify` passes

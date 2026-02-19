@@ -20,6 +20,7 @@ Recommended baseline tags:
 - `Folders`
 - `Documents`
 - `Permissions`
+- ...
 
 Rules:
 - Every operation MUST have exactly one primary tag.

@@ -1,0 +1,13 @@
+# TLS certificates
+# Generated automatically inside the `certs_data` Docker volume by `docker compose up -d`.
+# Exported locally only when running scripts/gen-certs.sh for OS browser trust.
+nginx/certs/localhost.crt
+nginx/certs/localhost.key
+nginx/certs/*.pem
+
+# Local environment overrides
+.env.local
+
+# Docker volumes backup
+*.sql.bak
+

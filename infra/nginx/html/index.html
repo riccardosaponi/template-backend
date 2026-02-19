@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>nomecliente — Local Dev Infrastructure</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 16px;
+    }
+    h1 { font-size: 1.6rem; font-weight: 700; color: #f8fafc; letter-spacing: -0.02em; }
+    .subtitle { color: #64748b; font-size: 0.9rem; margin-top: 4px; margin-bottom: 40px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      width: 100%;
+      max-width: 900px;
+    }
+    .card {
+      background: #1e2330;
+      border: 1px solid #2d3348;
+      border-radius: 12px;
+      padding: 20px 24px;
+    }
+    .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .badge {
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .badge-green  { background: #14532d; color: #86efac; }
+    .badge-blue   { background: #1e3a5f; color: #93c5fd; }
+    .badge-purple { background: #3b0764; color: #d8b4fe; }
+    .badge-yellow { background: #713f12; color: #fde68a; }
+    .card h2 { font-size: 1rem; font-weight: 600; }
+    .card p  { font-size: 0.8rem; color: #94a3b8; margin-bottom: 14px; line-height: 1.5; }
+    .links   { display: flex; flex-direction: column; gap: 6px; }
+    .link-row { display: flex; align-items: center; justify-content: space-between; }
+    .link-label { font-size: 0.75rem; color: #64748b; }
+    a {
+      font-size: 0.8rem;
+      color: #60a5fa;
+      text-decoration: none;
+      font-family: "SF Mono", "Fira Code", monospace;
+    }
+    a:hover { color: #93c5fd; text-decoration: underline; }
+    .divider { width: 100%; max-width: 900px; border: none; border-top: 1px solid #2d3348; margin: 32px 0 24px; }
+    .creds { width: 100%; max-width: 900px; }
+    .creds h3 { font-size: 0.85rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    th { text-align: left; padding: 6px 12px; color: #64748b; font-weight: 500; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; }
+    td { padding: 8px 12px; border-top: 1px solid #2d3348; }
+    code {
+      background: #2d3348;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 0.8rem;
+    }
+    .footer { margin-top: 40px; font-size: 0.75rem; color: #334155; }
+  </style>
+</head>
+<body>
+
+  <h1>🛠️ Local Dev Infrastructure</h1>
+  <p class="subtitle">nomecliente · development stack</p>
+
+  <div class="grid">
+
+    <div class="card">
+      <div class="card-header">
+        <span class="badge badge-blue">DB</span>
+        <h2>PostgreSQL 17</h2>
+      </div>
+      <p>Relational database. Contains <code>template_db</code> (app) and <code>keycloak_db</code>.</p>
+      <div class="links">
+        <div class="link-row">
+          <span class="link-label">JDBC</span>
+          <a>localhost:5432</a>
+        </div>
+        <div class="link-row">
+          <span class="link-label">App DB</span>
+          <a>template_db / template_user</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="badge badge-green">Auth</span>
+        <h2>Keycloak 26</h2>
+      </div>
+      <p>Identity provider. Realm <code>nomecliente</code> pre-loaded with test users.</p>
+      <div class="links">
+        <div class="link-row">
+          <span class="link-label">Admin (HTTP)</span>
+          <a href="http://localhost:8180/admin" target="_blank">localhost:8180/admin</a>
+        </div>
+        <div class="link-row">
+          <span class="link-label">Admin (HTTPS)</span>
+          <a href="https://localhost:8443/admin" target="_blank">localhost:8443/admin</a>
+        </div>
+        <div class="link-row">
+          <span class="link-label">Realm (HTTP)</span>
+          <a href="http://localhost:8180/realms/nomecliente" target="_blank">localhost:8180/realms/nomecliente</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="badge badge-purple">Mock</span>
+        <h2>WireMock</h2>
+      </div>
+      <p>HTTP mock server for external service dependencies. Add mappings in <code>wiremock/mappings/</code>.</p>
+      <div class="links">
+        <div class="link-row">
+          <span class="link-label">HTTP</span>
+          <a href="http://localhost:9090/__admin/ui" target="_blank">localhost:9090/__admin/ui</a>
+        </div>
+        <div class="link-row">
+          <span class="link-label">HTTPS</span>
+          <a href="https://localhost:9091/__admin/ui" target="_blank">localhost:9091/__admin/ui</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="badge badge-yellow">SMTP</span>
+        <h2>Mailpit</h2>
+      </div>
+      <p>Mock SMTP server. Captures outbound emails — nothing is actually delivered.</p>
+      <div class="links">
+        <div class="link-row">
+          <span class="link-label">SMTP</span>
+          <a>localhost:1025</a>
+        </div>
+        <div class="link-row">
+          <span class="link-label">Web UI (HTTP)</span>
+          <a href="http://localhost:8025" target="_blank">localhost:8025</a>
+        </div>
+        <div class="link-row">
+          <span class="link-label">Web UI (HTTPS)</span>
+          <a href="https://localhost:8026" target="_blank">localhost:8026</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <hr class="divider" />
+
+  <div class="creds">
+    <h3>Test credentials</h3>
+    <table>
+      <thead>
+        <tr><th>Service</th><th>Username</th><th>Password</th><th>Roles</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Keycloak admin</td><td><code>admin</code></td><td><code>admin</code></td><td>—</td></tr>
+        <tr><td>Realm user</td><td><code>developer</code></td><td><code>dev123</code></td><td>user, admin</td></tr>
+        <tr><td>Realm user</td><td><code>editor</code></td><td><code>editor123</code></td><td>user, editor</td></tr>
+        <tr><td>Realm user</td><td><code>testuser</code></td><td><code>test123</code></td><td>user</td></tr>
+        <tr><td>PostgreSQL</td><td><code>template_user</code></td><td><code>template_pass</code></td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="footer">Local dev only — self-signed TLS · no real data · no external calls</p>
+
+</body>
+</html>
+
