@@ -21,7 +21,7 @@ The project is a **multi-module Spring Boot monorepo** (single application, mult
 ## Quick Commands
 - Compile: `./mvnw clean compile`
 - Tests + coverage: `./mvnw -q verify`
-- Run locally (with docker-compose Postgres): `./mvnw spring-boot:run`
+- Run locally (with docker-compose Postgres): `./mvnw spring-boot:run -pl app`
 
 ---
 
@@ -58,34 +58,49 @@ The project is a **multi-module Spring Boot monorepo** (single application, mult
 ### Repository Layout
 ```
 <repo-root>/
-  pom.xml
-  app/                               # Spring Boot application module
+  pom.xml                            # Parent POM (packaging=pom), modules: libs/shared-core, libs/${DOMAIN_LIB}-domain, app
+
+  app/                               # Spring Boot runnable module (artifactId: ${project}-app)
     src/main/java/${BASE_PACKAGE_PATH}/
-      backoffice/                    # REST Adapters (Controllers)
-      config/                        # Spring config, explicit bean wiring
+      backoffice/                    # REST Adapters (thin controllers, implement IN ports)
+      config/                        # Spring configuration, explicit bean wiring
+      config/security/               # SecurityConfig (SecurityFilterChain)
+    src/main/resources/
+      application.yml
+      db/changelog/                  # Liquibase master + changesets
 
   libs/
-    shared-core/                     # Security, WebConfig, GlobalExceptionHandler
-    ${DOMAIN_LIB}/                   # Feature-specific module (one per domain area)
-      src/main/java/${BASE_PACKAGE_PATH}/${DOMAIN_LIB}/
-        port/
-          in/                        # Use Case Interfaces (Inbound Ports)
-          out/                       # Repository/Client Interfaces (Outbound Ports)
-        usecase/                     # Business logic implementations (*Impl)
-        dto/                         # Request/Response objects
-        infrastructure/              # JDBC adapters, HTTP clients, filesystem adapters
+    shared-core/                     # Cross-cutting concerns (artifactId: ${project}-shared-core)
+      src/main/java/${BASE_PACKAGE_PATH}/
+        config/                      # WebConfig (CORS), GlobalExceptionHandler
+        config/security/             # JWT classes, SecurityContextHelper
+        domain/exception/            # Shared runtime exceptions
+        domain/ddd/dto/error/        # Error response DTOs
+
+    ${DOMAIN_LIB}-domain/            # Domain module per feature area (artifactId: ${project}-${DOMAIN_LIB}-domain)
+      src/main/java/${BASE_PACKAGE_PATH}/
+        domain/port/in/              # IN ports (use case interfaces)
+        domain/port/out/             # OUT ports (repository/client interfaces)
+        domain/usecase/              # Use case interface + *Impl (business logic)
+        domain/ddd/dto/              # Request/Response DTOs
+        domain/ddd/entity/           # Domain entities
+        domain/ddd/enumeration/      # Enumerations
+        infrastructure/              # OUT port implementations (JDBC, HTTP clients, storage)
 ```
+
+> Maven module naming convention: `${project}-shared-core`, `${project}-${DOMAIN_LIB}-domain`, `${project}-app`.
 
 ### Layer Rules
 
-| Layer | Package | Rule |
+| Layer | Module / Package | Rule |
 |---|---|---|
-| REST Adapter | `app/.../backoffice` | Thin: HTTP mapping + validation + delegation only. Implements IN port. |
-| IN Port | `libs/.../port/in` | Pure interface defining the use case contract. |
-| Use Case | `libs/.../usecase` | Interface + `*Impl`. Business logic lives in `*Impl`. |
-| OUT Port | `libs/.../port/out` | Interface for persistence, filesystem, external HTTP. |
-| Infrastructure | `libs/.../infrastructure` | Implements OUT ports (JDBC, HTTP client, storage). |
-| Config | `app/.../config` | Spring `@Configuration` classes. No business logic. |
+| REST Adapter | `app/.../backoffice/` | Thin: HTTP mapping + validation + delegation only. Implements IN port. |
+| IN Port | `libs/${DOMAIN_LIB}-domain/.../domain/port/in/` | Pure interface defining the use case contract. |
+| Use Case | `libs/${DOMAIN_LIB}-domain/.../domain/usecase/` | Interface + `*Impl`. Business logic lives in `*Impl`. |
+| OUT Port | `libs/${DOMAIN_LIB}-domain/.../domain/port/out/` | Interface for persistence, filesystem, external HTTP. |
+| Infrastructure | `libs/${DOMAIN_LIB}-domain/.../infrastructure/` | Implements OUT ports (JDBC, HTTP client, storage). |
+| Shared Utils | `libs/shared-core/.../config/` | WebConfig, GlobalExceptionHandler, JWT helpers. No business logic. |
+| Config | `app/.../config/` | Spring `@Configuration` classes and `SecurityFilterChain`. No business logic. |
 
 > Rule: REST adapters must not contain business rules. Those belong in `*Impl`.
 
@@ -97,8 +112,8 @@ The project is a **multi-module Spring Boot monorepo** (single application, mult
 - **Use `NamedParameterJdbcTemplate` with SQL text blocks (`"""`)**. Never use JPA/Hibernate.
 
 ### Liquibase
-- Master changelog: `src/main/resources/db/changelog/db.changelog-master.yaml`
-- Changesets: `src/main/resources/db/changelog/changes/**`
+- Master changelog: `app/src/main/resources/db/changelog/db.changelog-master.yaml`
+- Changesets: `app/src/main/resources/db/changelog/changes/**`
 - Format: XML changesets (`.xml`).
 
 ### Column Types (always lowercase)
@@ -261,13 +276,14 @@ Deliverables
 
 3) Code (hexagonal, multi-module)
    - REST adapter in app/.../backoffice/ (thin, OpenAPI annotations, implements IN port).
-   - IN port in libs/${DOMAIN_LIB}/port/in/.
-   - Use case interface + *Impl in libs/${DOMAIN_LIB}/usecase/ (business logic in *Impl).
-   - OUT port in libs/${DOMAIN_LIB}/port/out/.
-   - Infrastructure implementations in libs/${DOMAIN_LIB}/infrastructure/.
+   - IN port in libs/${DOMAIN_LIB}-domain/.../domain/port/in/.
+   - Use case interface + *Impl in libs/${DOMAIN_LIB}-domain/.../domain/usecase/ (business logic in *Impl).
+   - OUT port in libs/${DOMAIN_LIB}-domain/.../domain/port/out/.
+   - Infrastructure implementations in libs/${DOMAIN_LIB}-domain/.../infrastructure/.
+   - Shared exceptions/error DTOs in libs/shared-core/.../domain/exception/ and domain/ddd/dto/error/.
 
 4) Persistence / storage
-   - DB schema changes: add Liquibase XML changeset under src/main/resources/db/changelog/changes/
+   - DB schema changes: add Liquibase XML changeset under `app/src/main/resources/db/changelog/changes/`
      and wire it in the master changelog.
    - External HTTP: implement adapter + stub with WireMock in tests.
 
@@ -280,8 +296,7 @@ Quality gate (must be green)
 - ./mvnw verify
 
 Output
-- Short summary: what changed, where, and why.
-- Build/test status (PASS / FAIL). If FAIL, provide fix plan.
+- Short summary: what changed, where, and why. - Build/test status (PASS / FAIL). If FAIL, provide fix plan.
 ```
 
 ### Example
