@@ -1,59 +1,29 @@
-name: nomecliente-infra
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Local development infrastructure
 #
-# Services & exposed ports
-#   PostgreSQL 17    → localhost:5432
-#   Keycloak 26.x    → http://localhost:8180   (direct, for Spring Boot)
-#                      https://localhost:8443   (via nginx, for browser/Postman)
-#   WireMock         → http://localhost:9090   (direct)
-#                      https://localhost:9091   (via nginx)
-#   Mailpit SMTP     → localhost:1025
-#   Mailpit Web UI   → http://localhost:8025   (direct)
-#                      https://localhost:8026   (via nginx)
-#   nginx hub        → http://localhost:80     (service index)
+# Services & exposed ports (host → container)
+#   PostgreSQL 17          → localhost:5432
+#   Keycloak (26.5.4+)     → http://localhost:8180          (direct, for Spring Boot)
+#                            https://localhost/auth          (via nginx, for browser / Postman)
+#   WireMock 3.13.0        → http://localhost:8280          (direct, no nginx route)
+#   smtp4dev  SMTP         → localhost:2525
+#   smtp4dev  Web UI       → http://localhost:9080          (direct, no nginx route)
+#   nginx  HTTPS hub       → https://localhost:443          (TLS self-signed, cert generated at build time)
 #
-# Startup (first time and every subsequent time):
-#   cd infra && docker compose up -d
+# nginx routes
+#   /auth  →  Keycloak:8080  (HTTP + HTTPS)
 #
-# Reset (deletes all data and regenerates certs):
-#   docker compose down -v && docker compose up -d
+# Startup
+#   First time (or after nginx/Dockerfile changes):
+#     cd infra && docker compose up -d --build
+#   Every subsequent time:
+#     cd infra && docker compose up -d
+#
+# Reset (destroys volumes + rebuilds):
+#   docker compose down -v && docker compose up -d --build
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
-
-  # ── TLS certificate generator (one-shot) ──────────────────────────────────
-  # Runs alpine+openssl, generates a self-signed cert with correct SANs into
-  # the `certs_data` named volume, then exits. Idempotent: skips if cert
-  # already exists. nginx depends on this service completing successfully.
-  certs:
-    image: alpine
-    container_name: infra_certs
-    volumes:
-      - certs_data:/certs
-      - ./scripts/openssl.cnf:/tmp/openssl.cnf:ro
-    command:
-      - sh
-      - -c
-      - |
-        if [ -f /certs/localhost.crt ]; then
-          echo "TLS certificate already present — skipping generation."
-          exit 0
-        fi
-        apk add --no-cache openssl > /dev/null 2>&1
-        openssl req -x509 \
-          -newkey rsa:4096 \
-          -keyout /certs/localhost.key \
-          -out    /certs/localhost.crt \
-          -days   3650 \
-          -nodes  \
-          -config /tmp/openssl.cnf
-        chmod 600 /certs/localhost.key
-        echo "TLS certificate generated (valid 10 years)."
-    restart: "no"
-    networks:
-      - infra_net
 
   # ── PostgreSQL 17 ──────────────────────────────────────────────────────────
   postgres:
@@ -63,7 +33,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_ROOT_PASSWORD:-postgres}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - project_postgres_data:/var/lib/postgresql/data
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
     ports:
       - "5432:5432"
@@ -75,9 +45,9 @@ services:
     networks:
       - infra_net
 
-  # ── Keycloak 26.x ──────────────────────────────────────────────────────────
-  keycloak:
-    image: quay.io/keycloak/keycloak:${KEYCLOAK_VERSION:-26.1.4}
+  # ── Keycloak (version controlled by KEYCLOAK_VERSION env, default 26.5.4) ──
+  auth:
+    image: quay.io/keycloak/keycloak:${KEYCLOAK_VERSION:-26.5.4}
     container_name: infra_keycloak
     # start-dev: relaxed production checks; --import-realm on first run only
     command: start-dev --import-realm
@@ -87,85 +57,63 @@ services:
       KC_DB_URL: jdbc:postgresql://postgres:5432/${KEYCLOAK_DB_NAME:-keycloak_db}
       KC_DB_USERNAME: ${KEYCLOAK_DB_USER:-keycloak_user}
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak_pass}
-      # Hostname — must match the issuer in Spring Boot's application.yml
-      KC_HOSTNAME: localhost
-      KC_HOSTNAME_STRICT: "false"
-      KC_HTTP_PORT: 8180
       KC_HTTP_ENABLED: "true"
-      # Trust X-Forwarded-* headers sent by nginx
       KC_PROXY_HEADERS: xforwarded
+      KC_HTTP_RELATIVE_PATH: /auth
       # Admin console credentials
-      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
-      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
       KC_LOG_LEVEL: INFO
+      JAVA_OPTS: "-Xms256m -Xmx1g -XX:MetaspaceSize=96M -XX:MaxMetaspaceSize=256m"
     volumes:
-      - ./keycloak/realm-import.json:/opt/keycloak/data/import/realm-import.json:ro
+      - ./keycloak:/opt/keycloak/data/import
     ports:
-      - "8180:8180"
+      - "8180:8080"
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
     networks:
       - infra_net
 
-  # ── WireMock ───────────────────────────────────────────────────────────────
+  # ── WireMock 3.13.0 — mock external HTTP services (http://localhost:8280) ──
   wiremock:
-    image: wiremock/wiremock:${WIREMOCK_VERSION:-latest}
+    image: wiremock/wiremock:3.13.0
     container_name: infra_wiremock
     command: --verbose --global-response-templating
     volumes:
       - ./wiremock/mappings:/home/wiremock/mappings:ro
       - ./wiremock/__files:/home/wiremock/__files:ro
     ports:
-      - "9090:8080"
+      - "8280:8080"
     networks:
       - infra_net
 
-  # ── Mailpit (mock SMTP + web UI) ───────────────────────────────────────────
-  mailpit:
-    image: axllent/mailpit:${MAILPIT_VERSION:-latest}
-    container_name: infra_mailpit
-    environment:
-      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
-      MP_MAX_MESSAGES: "500"
-      MP_UI_BIND_ADDR: "0.0.0.0:8025"
-      MP_SMTP_BIND_ADDR: "0.0.0.0:1025"
+  # ── smtp4dev — mock SMTP server (smtp:2525, web UI:9080) ──────────────────
+  mail:
+    image: rnwood/smtp4dev
+    container_name: infra-mail
     ports:
-      - "1025:1025"   # SMTP
-      - "8025:8025"   # Web UI
+      - "2525:25"
+      - "9080:80"
     networks:
       - infra_net
 
-  # ── nginx (HTTPS termination + service hub) ────────────────────────────────
-  nginx:
-    image: nginx:alpine
-    container_name: infra_nginx
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./nginx/html:/usr/share/nginx/html:ro
-      - certs_data:/etc/nginx/certs:ro       # generated by the `certs` service
-    ports:
-      - "80:80"       # HTTP hub / service index
-      - "8443:8443"   # Keycloak HTTPS
-      - "9091:9091"   # WireMock HTTPS
-      - "8026:8026"   # Mailpit HTTPS
+  # ── nginx — HTTPS termination (https://localhost:443, self-signed cert auto-generated at build) ──
+  reverse-proxy:
     depends_on:
-      certs:
-        condition: service_completed_successfully
-      keycloak:
-        condition: service_started
-      wiremock:
-        condition: service_started
-      mailpit:
-        condition: service_started
+      - auth
+    container_name: infra-reverseproxy
+    build:
+      context: ./reverse-proxy
+      dockerfile: Dockerfile
+    ports:
+      - "443:443"
+    command: /bin/sh -c "envsubst < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;'"
     networks:
       - infra_net
 
 # ─────────────────────────────────────────────────────────────────────────────
 volumes:
-  postgres_data:
-  certs_data:       # TLS certificate generated by the `certs` service
+  project_postgres_data:
 
 networks:
   infra_net:

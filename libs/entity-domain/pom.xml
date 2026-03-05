@@ -7,19 +7,21 @@
   <parent>
     <groupId>it.quix</groupId>
     <artifactId>nomecliente-backend-parent</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>${revision}</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>nomecliente-entity-domain</artifactId>
+  <artifactId>entity</artifactId>
   <name>nomecliente-entity-domain</name>
   <description>Domain module: ports (in/out), use cases, DTOs, domain model, infrastructure (JDBC adapters)</description>
+  <packaging>jar</packaging>
+
 
   <dependencies>
     <!-- Shared cross-cutting concerns (exceptions, error DTOs) -->
     <dependency>
       <groupId>it.quix</groupId>
-      <artifactId>nomecliente-shared-core</artifactId>
+      <artifactId>shared-core</artifactId>
       <version>${project.version}</version>
     </dependency>
 
