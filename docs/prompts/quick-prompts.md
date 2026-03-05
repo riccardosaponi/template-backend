@@ -2,6 +2,8 @@
 
 These are ready-to-use prompt templates for common microservice scenarios. Copy, customize the placeholders, and use.
 
+See [`docs/architecture.md`](../architecture.md) for multi-module Maven structure and hexagonal pattern details.
+
 ---
 
 ## 1. CRUD Entity with Database
@@ -80,7 +82,7 @@ Business Rules:
 
 Database:
 - Add indexes on filterable fields: [list fields]
-- Use JPA Specification or JdbcTemplate with dynamic WHERE clause
+- Use NamedParameterJdbcTemplate with dynamic WHERE clause for filtering
 
 Follow pagination conventions from docs/openapi-guidelines.md
 ```
@@ -165,8 +167,8 @@ Business Rules:
 
 Database:
 - Create optimized query with aggregation functions (SUM, COUNT, AVG)
-- Consider creating materialized view for complex calculations
-- Add indexes on date fields used for filtering
+- Consider database indexes on date/grouping fields for query performance
+- Use NamedParameterJdbcTemplate for native SQL aggregation queries
 
 Implementation:
 - Use JdbcTemplate for native SQL queries with aggregations
@@ -255,8 +257,8 @@ Database:
 - Add foreign key to [ENTITY_B] table: entity_a_id
 
 Implementation:
-- Create relationship-specific repository methods
-- Implement cascade delete behavior (specify)
+- Create relationship-specific repository methods (JDBC queries)
+- Implement cascade delete behavior via database constraints (specify: CASCADE, SET NULL, RESTRICT)
 - Use transactional boundaries correctly
 - Return appropriate DTOs with relationship data
 ```

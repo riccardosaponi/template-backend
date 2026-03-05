@@ -14,7 +14,7 @@ This document guides an AI assistant to:
 1. Implement features end-to-end following the hexagonal architecture and conventions of this codebase.
 2. Create new project skeletons that respect the same engineering standards.
 
-The project is a **multi-module Spring Boot monorepo** (single application, multiple Maven modules).
+The project is a **multi-module Spring Boot monorepo** (single application, multiple Maven modules: deplayment apps and libs).
 
 ---
 
@@ -55,96 +55,14 @@ The project is a **multi-module Spring Boot monorepo** (single application, mult
 
 ## Architecture (Hexagonal / DDD — Multi-Module)
 
-### Repository Layout
-```
-<repo-root>/
-  pom.xml                            # Parent POM (packaging=pom), modules: libs/shared-core, libs/${DOMAIN_LIB}-domain, app
-
-  app/                               # Spring Boot runnable module (artifactId: ${project}-app)
-    src/main/java/${BASE_PACKAGE_PATH}/
-      backoffice/                    # REST Adapters (thin controllers, implement IN ports)
-      config/                        # Spring configuration, explicit bean wiring
-      config/security/               # SecurityConfig (SecurityFilterChain)
-    src/main/resources/
-      application.yml
-      db/changelog/                  # Liquibase master + changesets
-
-  libs/
-    shared-core/                     # Cross-cutting concerns (artifactId: ${project}-shared-core)
-      src/main/java/${BASE_PACKAGE_PATH}/
-        config/                      # WebConfig (CORS), GlobalExceptionHandler
-        config/security/             # JWT classes, SecurityContextHelper
-        domain/exception/            # Shared runtime exceptions
-        domain/ddd/dto/error/        # Error response DTOs
-
-    ${DOMAIN_LIB}-domain/            # Domain module per feature area (artifactId: ${project}-${DOMAIN_LIB}-domain)
-      src/main/java/${BASE_PACKAGE_PATH}/
-        domain/port/in/              # IN ports (use case interfaces)
-        domain/port/out/             # OUT ports (repository/client interfaces)
-        domain/usecase/              # Use case interface + *Impl (business logic)
-        domain/ddd/dto/              # Request/Response DTOs
-        domain/ddd/entity/           # Domain entities
-        domain/ddd/enumeration/      # Enumerations
-        infrastructure/              # OUT port implementations (JDBC, HTTP clients, storage)
-```
-
-> Maven module naming convention: `${project}-shared-core`, `${project}-${DOMAIN_LIB}-domain`, `${project}-app`.
-
-### Layer Rules
-
-| Layer | Module / Package | Rule |
-|---|---|---|
-| REST Adapter | `app/.../backoffice/` | Thin: HTTP mapping + validation + delegation only. Implements IN port. |
-| IN Port | `libs/${DOMAIN_LIB}-domain/.../domain/port/in/` | Pure interface defining the use case contract. |
-| Use Case | `libs/${DOMAIN_LIB}-domain/.../domain/usecase/` | Interface + `*Impl`. Business logic lives in `*Impl`. |
-| OUT Port | `libs/${DOMAIN_LIB}-domain/.../domain/port/out/` | Interface for persistence, filesystem, external HTTP. |
-| Infrastructure | `libs/${DOMAIN_LIB}-domain/.../infrastructure/` | Implements OUT ports (JDBC, HTTP client, storage). |
-| Shared Utils | `libs/shared-core/.../config/` | WebConfig, GlobalExceptionHandler, JWT helpers. No business logic. |
-| Config | `app/.../config/` | Spring `@Configuration` classes and `SecurityFilterChain`. No business logic. |
-
-> Rule: REST adapters must not contain business rules. Those belong in `*Impl`.
+See [`docs/architecture.md`](docs/architecture.md) for the full repository layout, package map, flow diagram, layer rules, port patterns, and feature implementation checklist.
 
 ---
 
 ## Database Conventions (JDBC + Liquibase)
 
-### Technology
 - **Use `NamedParameterJdbcTemplate` with SQL text blocks (`"""`)**. Never use JPA/Hibernate.
-
-### Liquibase
-- Master changelog: `app/src/main/resources/db/changelog/db.changelog-master.yaml`
-- Changesets: `app/src/main/resources/db/changelog/changes/**`
-- Format: XML changesets (`.xml`).
-
-### Column Types (always lowercase)
-| Value | Type |
-|---|---|
-| GUID / UUID | `varchar(36)` — never `uuid` |
-| Timestamps | `timestamptz` — never `timestamp` |
-| Strings | `varchar(n)` |
-| Flags / states | `int` or `boolean` |
-| Large numbers | `bigint` |
-
-### Table and Column Naming
-- **Table names**: singular form (`folder`, `file`, not `folders`).
-- **Primary key**: `${entity}_id` (e.g. `folder_id`).
-- **Column names**: `snake_case`.
-
-### Standard Audit Columns (mandatory on every table)
-```xml
-<column name="created_by"   type="varchar(255)"><constraints nullable="false"/></column>
-<column name="created_date" type="timestamptz"><constraints nullable="false"/></column>
-<column name="updated_by"   type="varchar(255)"/>
-<column name="updated_date" type="timestamptz"/>
-<column name="canceled"     type="int" defaultValueNumeric="0"><constraints nullable="false"/></column>
-<column name="delete_date"  type="timestamptz"/>
-<column name="delete_user"  type="varchar(100)"/>
-```
-
-### Soft Delete Pattern
-- **Never physically delete records**.
-- Set `canceled = 1`, populate `delete_date` and `delete_user`.
-- All SELECT queries must filter with `WHERE canceled = 0`.
+- For column types, table/column naming, audit columns, soft delete pattern, and changeset rules see [`docs/liquibase-guidelines.md`](docs/liquibase-guidelines.md).
 
 ---
 
@@ -157,51 +75,15 @@ The project is a **multi-module Spring Boot monorepo** (single application, mult
 
 ## REST API Conventions
 
-### Location
-REST adapters (controllers) belong in the `app/` module under `backoffice/`. They implement the IN port from the corresponding `libs/` module.
-
-### HTTP Semantics
-| Method | Success Status |
-|---|---|
-| GET | 200 OK or 204 No Content |
-| POST | 201 Created |
-| PUT / PATCH | 200 OK |
-| DELETE | 204 No Content (soft delete) |
-
-### Other Rules
 - **No `@CrossOrigin`**: CORS is managed centrally in `WebConfig.java` (in `shared-core`).
 - **File download**: Return `ResponseEntity<Resource>` with `Content-Disposition`. Stream directly; never load entire file into memory.
-- Apply OpenAPI annotations as defined in `docs/openapi-guidelines.md`.
+- For endpoint naming, HTTP status codes, tagging, `operationId`, and SpringDoc annotations see [`docs/openapi-guidelines.md`](docs/openapi-guidelines.md).
 
 ---
 
 ## Testing Strategy
 
-### Unit Tests (domain / use case layer)
-- Location: same module as the code under test.
-- Annotation: `@ExtendWith(MockitoExtension.class)`.
-- Mock all outbound ports (OUT ports).
-- Cover: happy path + all error/edge cases.
-- Naming: `shouldXxx()` or `xxx_shouldYyy()`.
-
-### Integration Tests (full slice)
-- Use Spring Boot context + PostgreSQL via **Testcontainers**.
-- Liquibase must apply schema from scratch on each test run.
-- Use **MockMvc** to test endpoints end-to-end.
-- External HTTP APIs must be stubbed with **WireMock** (never call live systems in CI).
-- Use `@TempDir` for isolated filesystem testing.
-
-### Required Scenarios (baseline per endpoint)
-- Success path
-- Validation error → 400
-- Authorization → 403 (once security is enabled)
-- Domain edge case (conflicts, not-found, business rule violations, etc.)
-
-### Acceptance Criteria
-1. Code compiles (`./mvnw clean compile`).
-2. All tests pass — no skipped tests.
-3. Happy path AND error scenarios covered.
-4. No new warnings introduced.
+See [`docs/testing-strategy.md`](docs/testing-strategy.md) for the full strategy (unit tests, integration tests, required scenarios, coverage rules, and Maven commands).
 
 ---
 

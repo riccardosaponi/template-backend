@@ -66,13 +66,17 @@ Use `io.swagger.v3.oas.annotations.*`.
 
 - Prefer nouns for resources (`/api/folders`, `/api/documents`).
 - Use plural resources.
-- Use correct HTTP status codes:
-  - `200` OK for reads/updates
-  - `201` Created for creates
-  - `204` No Content for deletes (if no body)
-  - `400` for validation
-  - `403` for authorization
-  - `404` for not found
+
+| Status | When to use |
+|---|---|
+| `200` OK | Reads and updates |
+| `201` Created | Resource creation (POST) |
+| `204` No Content | Deletes with no response body |
+| `400` Bad Request | Input validation failure |
+| `401` Unauthorized | Missing or invalid JWT |
+| `403` Forbidden | Valid JWT but insufficient permissions |
+| `404` Not Found | Resource does not exist |
+| `409` Conflict | Business rule violation (e.g. duplicate, state conflict) |
 
 ## 7) Consistency checks (manual)
 

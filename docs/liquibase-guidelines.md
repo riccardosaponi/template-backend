@@ -1,7 +1,62 @@
 # Liquibase Database Migration Guidelines
 
 ## Overview
-This project uses Liquibase for database schema versioning and migration management. Liquibase changesets are written in YAML format and executed automatically at application startup.
+This project uses Liquibase for database schema versioning and migration management. Changesets are written in **YAML** format and applied automatically at application startup.
+
+---
+
+## DB Modeling Conventions
+
+### Column Types (always lowercase)
+| Value | Type |
+|---|---|
+| GUID / UUID | `varchar(36)` — never `uuid` |
+| Timestamps | `timestamptz` — never `timestamp` |
+| Short strings | `varchar(n)` |
+| Unbounded text | `text` — when length is unknown or variable |
+| Flags / states | `int` or `boolean` |
+| Large numbers | `bigint` |
+| Decimals | `decimal(p,s)` — e.g. `decimal(19,4)` for monetary values |
+| JSON | `jsonb` — binary JSON, indexed and queryable (preferred over `json`) |
+
+### Table and Column Naming
+- **Table names**: singular (`entity`, not `entities`).
+- **Primary key**: `${entity}_id` (e.g. `entity_id`, `folder_id`).
+- **Column names**: `snake_case`.
+- **Constraint names**: `pk_{table}`, `fk_{table}_{ref_table}`, `uk_{table}_{col}`, `idx_{table}_{col}`.
+
+### Mandatory Audit Columns (every table)
+```yaml
+- column:
+    name: created_by
+    type: varchar(255)
+    constraints: { nullable: false }
+- column:
+    name: created_date
+    type: timestamptz
+    constraints: { nullable: false }
+- column:
+    name: last_updated_by
+    type: varchar(255)
+- column:
+    name: last_updated_date
+    type: timestamptz
+- column:
+    name: canceled
+    type: int
+    defaultValueNumeric: 0
+    constraints: { nullable: false }
+```
+
+### Soft Delete (mandatory)
+- **Never physically delete records.**
+- On delete: set `canceled = 1`.
+- Use `canceled` consistently with the business logic of each query:
+  - Standard reads (user-facing lists, lookups, validations): filter `WHERE canceled = 0` to expose only active records.
+  - Administrative or audit queries: may intentionally include canceled records — document this explicitly in the query or method.
+  - Uniqueness checks (e.g. duplicate code detection): decide per business rule whether canceled records count as conflicts or not, and document the choice.
+
+---
 
 ## Directory Structure
 ```

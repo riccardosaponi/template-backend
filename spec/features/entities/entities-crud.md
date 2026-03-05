@@ -1,5 +1,17 @@
 # Entity CRUD - API Specification
 
+**Domain entity**: `Entity` (see [`00-domain-entity.md`](00-domain-entity.md))
+
+**Implementation modules**:
+- REST adapter: `apps/backoffice/.../application/EntityRestAdapter`
+- Domain layer: `libs/entity-domain/.../domain/usecase/` (Create, Get, List, Update, Delete use cases)
+- Infrastructure: `libs/entity-domain/.../infrastructure/` (JDBC persistence with `NamedParameterJdbcTemplate`)
+- Database: table `entity` with Liquibase migrations in `apps/backoffice/.../db/changelog/changes/`
+
+**Reference documentation**: [`AGENTS.md`](../../../AGENTS.md), [`docs/architecture.md`](../../../docs/architecture.md), [`docs/dod.md`](../../../docs/dod.md)
+
+---
+
 ## Endpoints
 
 ### 1. Create Entity
@@ -19,11 +31,11 @@
   "id": "123e4567-e89b-12d3-a456-426614174000",
   "code": "ENT001",
   "description": "First entity",
-  "createDate": "2024-02-08T10:15:30.123Z",
-  "createUser": "system",
-  "lastUpdateDate": null,
-  "lastUpdateUser": null,
-  "canceled": false
+  "createdDate": "2024-02-08T10:15:30.123Z",
+  "createdBy": "system",
+  "updatedDate": null,
+  "updatedBy": null,
+  "canceled": 0
 }
 ```
 
@@ -44,11 +56,11 @@
   "id": "123e4567-e89b-12d3-a456-426614174000",
   "code": "ENT001",
   "description": "First entity",
-  "createDate": "2024-02-08T10:15:30.123Z",
-  "createUser": "system",
-  "lastUpdateDate": null,
-  "lastUpdateUser": null,
-  "canceled": false
+  "createdDate": "2024-02-08T10:15:30.123Z",
+  "createdBy": "system",
+  "updatedDate": null,
+  "updatedBy": null,
+  "canceled": 0
 }
 ```
 
@@ -74,11 +86,11 @@
       "id": "123e4567-e89b-12d3-a456-426614174000",
       "code": "ENT001",
       "description": "First entity",
-      "createDate": "2024-02-08T10:15:30.123Z",
-      "createUser": "system",
-      "lastUpdateDate": null,
-      "lastUpdateUser": null,
-      "canceled": false
+      "createdDate": "2024-02-08T10:15:30.123Z",
+      "createdBy": "system",
+      "updatedDate": null,
+      "updatedBy": null,
+      "canceled": 0
     }
   ],
   "pageable": {
@@ -109,11 +121,11 @@
   "id": "123e4567-e89b-12d3-a456-426614174000",
   "code": "ENT001-UPDATED",
   "description": "Updated description",
-  "createDate": "2024-02-08T10:15:30.123Z",
-  "createUser": "system",
-  "lastUpdateDate": "2024-02-08T11:20:45.678Z",
-  "lastUpdateUser": "system",
-  "canceled": false
+  "createdDate": "2024-02-08T10:15:30.123Z",
+  "createdBy": "system",
+  "updatedDate": "2024-02-08T11:20:45.678Z",
+  "updatedBy": "system",
+  "canceled": 0
 }
 ```
 
@@ -142,7 +154,7 @@
 - **Code**: 
   - Required, not blank
   - Max length: 50 characters
-  - Must be unique
+  - Must be unique (across non-canceled entities)
   - Trimmed before persistence
 - **Description**:
   - Required, not blank
@@ -150,13 +162,17 @@
   - Trimmed before persistence
 
 ### Audit Fields
-- **createDate**: Set automatically on creation (Instant.now())
-- **createUser**: Set from security context (or "system" if not available)
-- **lastUpdateDate**: Updated automatically on every update
-- **lastUpdateUser**: Updated from security context on every update
+- **createdDate** (DB: `created_date`): Set automatically on creation (Instant.now())
+- **createdBy** (DB: `created_by`): Set from security context (or "system" if not available)
+- **updatedDate** (DB: `updated_date`): Updated automatically on every update
+- **updatedBy** (DB: `updated_by`): Updated from security context on every update
+
+See [`docs/liquibase-guidelines.md`](../../../docs/liquibase-guidelines.md) for database naming conventions.
 
 ### Logical Delete
-- DELETE operation sets `canceled=true` and updates audit fields
+- DELETE operation sets `canceled=1` and updates audit fields
 - Canceled entities are still retrievable by ID
-- List operations may filter out canceled entities (to be decided)
+- List operations exclude canceled entities by default (filter `WHERE canceled = 0`)
+
+See [`docs/dod.md`](../../../docs/dod.md) for Definition of Done and [`AGENTS.md`](../../../AGENTS.md) for implementation guidelines.
 

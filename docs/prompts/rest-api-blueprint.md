@@ -2,12 +2,19 @@
 
 Use this blueprint to implement a complete REST API feature following the hexagonal architecture.
 
+See [`docs/architecture.md`](../architecture.md) for multi-module Maven structure, layer rules, and code examples.
+
 ---
 
 ## PROMPT TEMPLATE
 
 ```
-Implement the following REST API feature in the Spring Boot project following hexagonal architecture guidelines.
+Implement the following REST API feature in the Spring Boot project following hexagonal architecture guidelines and the multi-module Maven structure.
+
+### Modules Affected
+- `libs/{domain}-domain` (domain layer with use cases and ports)
+- `apps/backoffice` (REST adapter and migrations)
+- `libs/shared-core` (if shared exceptions/DTOs needed)
 
 ### Feature: [FEATURE_NAME]
 Example: "User Profile Management"
@@ -144,14 +151,14 @@ Implementation checklist:
 4. **Remove example text** and keep only your actual requirements
 5. **Submit the filled prompt** to the AI agent for implementation
 
-The agent will:
-- Follow hexagonal architecture patterns from `docs/architecture.md`
-- Implement proper error handling per `docs/error-model.md`
-- Follow REST API conventions from `docs/openapi-guidelines.md`
-- Create comprehensive tests per `docs/testing-strategy.md`
-- Apply Liquibase best practices from `docs/liquibase-guidelines.md`
-- Use proper security patterns from `docs/security-keycloak.md`
-- Meet Definition of Done criteria from `docs/dod.md`
+The agent will follow:
+- Hexagonal architecture from [`docs/architecture.md`](../architecture.md)
+- Error handling from [`docs/error-model.md`](../error-model.md)
+- REST API conventions from [`docs/openapi-guidelines.md`](../openapi-guidelines.md)
+- Testing strategy from [`docs/testing-strategy.md`](../testing-strategy.md)
+- Liquibase best practices from [`docs/liquibase-guidelines.md`](../liquibase-guidelines.md)
+- Security patterns from [`docs/security-keycloak.md`](../security-keycloak.md)
+- Definition of Done from [`docs/dod.md`](../dod.md)
 
 ---
 

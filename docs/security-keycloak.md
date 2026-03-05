@@ -2,11 +2,11 @@
 
 ## Overview
 
-Questo backend implementa un sistema di autenticazione e autorizzazione basato su **JWT** (JSON Web Token) emessi da **Keycloak**. L'architettura segue il pattern **OAuth2 Resource Server** di Spring Security, dove il backend agisce come Resource Server protetto.
+This backend implements an authentication and authorisation system based on **JWT** (JSON Web Token) issued by **Keycloak**. The architecture follows the Spring Security **OAuth2 Resource Server** pattern, where the backend acts as a protected Resource Server.
 
 ---
 
-## 📐 Architettura Generale
+## Architecture
 
 ```
 ┌──────────────┐         ┌──────────────┐         ┌──────────────┐
@@ -40,28 +40,28 @@ Questo backend implementa un sistema di autenticazione e autorizzazione basato s
        │                        │                        │
 ```
 
-### Flusso di Autenticazione
+### Authentication Flow
 
-1. **Login Frontend**: L'utente inserisce credenziali nel frontend
-2. **Keycloak Token**: Keycloak valida le credenziali e restituisce un JWT
-3. **API Request**: Il frontend invia il JWT come header `Authorization: Bearer <token>`
-4. **Validazione JWT**: Il backend valida il token usando le chiavi pubbliche di Keycloak (JWK Set)
-5. **Estrazione Claims**: Il backend estrae username, email, ruoli dal JWT
-6. **Response**: Il backend processa la richiesta e risponde
+1. **Frontend Login**: The user enters credentials in the frontend.
+2. **Keycloak Token**: Keycloak validates the credentials and returns a JWT.
+3. **API Request**: The frontend sends the JWT as an `Authorization: Bearer <token>` header.
+4. **JWT Validation**: The backend validates the token using Keycloak's public keys (JWK Set).
+5. **Claims Extraction**: The backend extracts username, email, and roles from the JWT.
+6. **Response**: The backend processes the request and responds.
 
 ---
 
-## 🔐 Componenti di Spring Security
+## Spring Security Components
 
 ### 1. SecurityConfig
 
-**Classe**: `it.quix.nomecliente.config.security.SecurityConfig`
+**Class**: `it.quix.nomecliente.config.security.SecurityConfig`
 
-Configurazione principale di Spring Security che definisce:
-- **Protezione endpoint** (quali API sono pubbliche/protette)
-- **OAuth2 Resource Server** con validazione JWT
-- **Stateless session** (nessuna sessione HTTP)
-- **CSRF disabled** (non necessario per API stateless)
+Main Spring Security configuration defining:
+- **Endpoint protection** (which APIs are public / protected)
+- **OAuth2 Resource Server** with JWT validation
+- **Stateless session** (no HTTP session)
+- **CSRF disabled** (not needed for stateless APIs)
 
 ```java
 @Configuration
@@ -91,16 +91,16 @@ public class SecurityConfig {
 
 #### Endpoint Protection
 
-| Pattern | Accesso | Note |
-|---------|---------|------|
-| `/actuator/health` | Pubblico | Health check per load balancer |
-| `/api/health` | Pubblico | Health check applicativo |
-| `/swagger-ui/**` | Pubblico (dev only) | Swagger UI |
-| `/api/**` | **Autenticato** | Tutte le API business |
+| Pattern | Access | Notes |
+|---------|--------|-------|
+| `/actuator/health` | Public | Health check for load balancer |
+| `/api/health` | Public | Application health check |
+| `/swagger-ui/**` | Public (dev only) | Swagger UI |
+| `/api/**` | **Authenticated** | All business APIs |
 
 ---
 
-## 🎫 JWT Token Structure
+## JWT Token Structure
 
 ### Token Example (decoded)
 
@@ -129,24 +129,24 @@ public class SecurityConfig {
 }
 ```
 
-### Claims Utilizzati
+### Claims Used
 
-| Claim | Descrizione | Uso |
-|-------|-------------|-----|
-| `preferred_username` | Username utente | Audit trail (`createUser`, `lastUpdateUser`) |
-| `email` | Email utente | Notifiche, logging |
-| `given_name` | Nome | Display name, UI |
-| `family_name` | Cognome | Display name, UI |
-| `realm_access.roles` | Ruoli realm Keycloak | Autorizzazione base |
-| `resource_access.{client}.roles` | Ruoli client specifici | Autorizzazione avanzata |
+| Claim | Description | Usage |
+|-------|-------------|-------|
+| `preferred_username` | Username | Audit trail (`createUser`, `lastUpdateUser`) |
+| `email` | User email | Notifications, logging |
+| `given_name` | First name | Display name, UI |
+| `family_name` | Last name | Display name, UI |
+| `realm_access.roles` | Keycloak realm roles | Base authorisation |
+| `resource_access.{client}.roles` | Client-specific roles | Advanced authorisation |
 
 ---
 
-## 🔄 JWT Validation Flow
+## JWT Validation Flow
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  1. HTTP Request con JWT                                    │
+│  1. HTTP Request with JWT                                   │
 │     Authorization: Bearer eyJhbGciOiJSUzI1NiI...            │
 └───────────────────────┬─────────────────────────────────────┘
                         │
@@ -154,14 +154,14 @@ public class SecurityConfig {
 ┌─────────────────────────────────────────────────────────────┐
 │  2. Spring Security Filter Chain                             │
 │     - BearerTokenAuthenticationFilter                        │
-│     - Estrae JWT dall'header Authorization                   │
+│     - Extracts JWT from Authorization header                 │
 └───────────────────────┬─────────────────────────────────────┘
                         │
                         ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  3. JwtDecoder (NimbusJwtDecoder)                           │
-│     - Valida firma JWT con chiavi pubbliche di Keycloak     │
-│     - Verifica exp (expiration), iss (issuer), aud          │
+│     - Validates JWT signature with Keycloak public keys     │
+│     - Verifies exp (expiration), iss (issuer), aud          │
 │     - URL: {keycloak}/realms/{realm}/protocol/openid-       │
 │            connect/certs                                     │
 └───────────────────────┬─────────────────────────────────────┘
@@ -169,61 +169,61 @@ public class SecurityConfig {
                         ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  4. CustomJwtAuthenticationConverter                        │
-│     - Converte JWT in CustomJwtAuthenticationToken          │
+│     - Converts JWT into CustomJwtAuthenticationToken        │
 └───────────────────────┬─────────────────────────────────────┘
                         │
                         ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  5. JwtGrantedAuthoritiesConverter                          │
-│     - Estrae ruoli da realm_access.roles                    │
-│     - Converte in GrantedAuthority (ROLE_USER, ROLE_ADMIN)  │
+│     - Extracts roles from realm_access.roles                │
+│     - Converts to GrantedAuthority (ROLE_USER, ROLE_ADMIN)  │
 └───────────────────────┬─────────────────────────────────────┘
                         │
                         ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  6. CustomJwtAuthenticationToken creato                     │
+│  6. CustomJwtAuthenticationToken created                    │
 │     - username, email, firstName, lastName, roles            │
-│     - Salvato in SecurityContext                            │
+│     - Stored in SecurityContext                             │
 └───────────────────────┬─────────────────────────────────────┘
                         │
                         ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  7. Request processata dal Controller                        │
+│  7. Request processed by the Controller                      │
 │     - SecurityContextHelper.getCurrentUsername()             │
-│     - Use Case riceve info utente autenticato                │
+│     - Use case receives authenticated user info              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🧩 Classi Principali
+## Key Classes
 
 ### 1. CustomJwtAuthenticationToken
 
-Estende `JwtAuthenticationToken` per esporre informazioni utente in modo type-safe.
+Extends `JwtAuthenticationToken` to expose user information in a type-safe way.
 
 ```java
 public class CustomJwtAuthenticationToken extends JwtAuthenticationToken {
-    private final String username;      // da preferred_username
-    private final String email;         // da email
-    private final String firstName;     // da given_name
-    private final String lastName;      // da family_name
+    private final String username;      // from preferred_username
+    private final String email;         // from email
+    private final String firstName;     // from given_name
+    private final String lastName;      // from family_name
     private final String fullName;      // firstName + lastName
-    private final List<String> roles;   // da realm_access.roles
+    private final List<String> roles;   // from realm_access.roles
     
     public boolean hasRole(String role);
     public boolean hasAnyRole(String... roles);
 }
 ```
 
-**Perché Custom?**
-- **Type safety**: Evita cast e controlli null
-- **Convenienza**: Metodi helper per accesso veloce
-- **Testabilità**: Facilita mock nei test
+**Why custom?**
+- **Type safety**: Avoids casts and null checks.
+- **Convenience**: Helper methods for fast access.
+- **Testability**: Easier to mock in tests.
 
 ### 2. JwtGrantedAuthoritiesConverter
 
-Converte i ruoli del JWT in `GrantedAuthority` di Spring Security.
+Converts JWT roles into Spring Security `GrantedAuthority` objects.
 
 ```java
 @Component
@@ -232,11 +232,11 @@ public class JwtGrantedAuthoritiesConverter
     
     @Override
     public Collection<GrantedAuthority> convert(Jwt jwt) {
-        // Estrae realm_access.roles
+        // Extract realm_access.roles
         Map<String, Object> realmAccess = jwt.getClaim("realm_access");
         List<String> roles = (List<String>) realmAccess.get("roles");
         
-        // Converte in ROLE_USER, ROLE_ADMIN, etc.
+        // Convert to ROLE_USER, ROLE_ADMIN, etc.
         return roles.stream()
             .map(role -> new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()))
             .collect(Collectors.toList());
@@ -244,13 +244,13 @@ public class JwtGrantedAuthoritiesConverter
 }
 ```
 
-**Pattern: ROLE_prefix**
+**ROLE_ prefix pattern**
 - Keycloak: `["user", "admin"]`
 - Spring Security: `["ROLE_USER", "ROLE_ADMIN"]`
 
 ### 3. SecurityContextHelper
 
-Utility class per accesso semplificato alle informazioni utente.
+Utility class for simplified access to authenticated user information.
 
 ```java
 @Component
@@ -261,7 +261,7 @@ public class SecurityContextHelper {
         if (auth instanceof CustomJwtAuthenticationToken jwt) {
             return jwt.getUsername();
         }
-        return auth.getName(); // fallback per test
+        return auth.getName(); // fallback for tests
     }
     
     public boolean hasRole(String role) {
@@ -270,16 +270,16 @@ public class SecurityContextHelper {
 }
 ```
 
-**Vantaggi**:
-- **Centralizzato**: Logica di accesso in un solo punto
-- **Test-friendly**: Gestisce sia JWT reali che mock user
-- **Type-safe**: Evita cast manuali
+**Benefits:**
+- **Centralised**: Access logic in a single place.
+- **Test-friendly**: Handles both real JWT and mock users.
+- **Type-safe**: Avoids manual casts.
 
 ---
 
-## 🔒 Authorization Patterns
+## Authorisation Patterns
 
-### 1. Protezione a Livello Controller
+### 1. Controller-Level Protection
 
 ```java
 @RestController
@@ -289,12 +289,12 @@ public class AdminController {
     
     @GetMapping("/stats")
     public StatsDto getStats() {
-        // Solo ADMIN può accedere
+        // Only ADMIN can access
     }
 }
 ```
 
-### 2. Protezione a Livello Metodo
+### 2. Method-Level Protection
 
 ```java
 @Service
@@ -302,17 +302,17 @@ public class EntityService {
     
     @PreAuthorize("hasAnyRole('ADMIN', 'EDITOR')")
     public void deleteEntity(UUID id) {
-        // Solo ADMIN o EDITOR
+        // Only ADMIN or EDITOR
     }
     
     @PreAuthorize("hasRole('VIEWER')")
     public EntityDto getEntity(UUID id) {
-        // Qualsiasi utente con ruolo VIEWER
+        // Any user with VIEWER role
     }
 }
 ```
 
-### 3. Protezione Programmatica
+### 3. Programmatic Protection
 
 ```java
 @Service
@@ -324,10 +324,10 @@ public class EntityUseCaseImpl implements EntityUseCase {
     public void execute(EntityRequest request) {
         String currentUser = securityHelper.getCurrentUsername();
         
-        // Business logic con controllo custom
+        // Custom business-logic authorisation check
         if (!securityHelper.hasRole("admin") && 
             !request.getOwner().equals(currentUser)) {
-            throw new ForbiddenException("Non sei il proprietario");
+            throw new ForbiddenException("You are not the owner");
         }
         
         // ... business logic
@@ -337,7 +337,7 @@ public class EntityUseCaseImpl implements EntityUseCase {
 
 ---
 
-## 📊 Security Context Flow
+## Security Context Flow
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -362,57 +362,57 @@ public class EntityUseCaseImpl implements EntityUseCase {
 │  // "mario.rossi"                                       │
 │                                                          │
 │  entity.setCreateUser(user);                            │
-│  // Audit trail con utente reale                        │
+│  // Audit trail with real user                          │
 └─────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🧪 Testing con Security
+## Testing with Security
 
-### BaseUseCaseIT - Mock User
+### BaseUseCaseIT — Mock User
 
 ```java
 @SpringBootTest
 @Transactional
 @WithMockUser(username = "test-user", roles = {"USER"})
 public abstract class BaseUseCaseIT {
-    // Test con utente mockato "test-user"
+    // Tests run with mocked "test-user"
 }
 ```
 
-### SecurityContextHelper - Test Compatibility
+### SecurityContextHelper — Test Compatibility
 
-Il `SecurityContextHelper` è stato progettato per funzionare sia con JWT reali che con `@WithMockUser`:
+`SecurityContextHelper` is designed to work with both real JWT tokens and `@WithMockUser`:
 
 ```java
 public String getCurrentUsername() {
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
     
-    // JWT reale in produzione
+    // Real JWT in production
     if (auth instanceof CustomJwtAuthenticationToken jwt) {
         return jwt.getUsername();
     }
     
-    // Mock user nei test
+    // Mock user in tests
     return auth.getName(); // "test-user"
 }
 ```
 
-### Test di Autorizzazione
+### Authorisation Tests
 
 ```java
 @Test
 @WithMockUser(username = "admin", roles = {"ADMIN"})
 void shouldAllowAdmin() {
-    // Test passa - utente ha ruolo ADMIN
+    // Test passes — user has ADMIN role
     adminService.deleteAll();
 }
 
 @Test
 @WithMockUser(username = "user", roles = {"USER"})
 void shouldDenyUser() {
-    // Test fallisce con AccessDeniedException
+    // Test fails with AccessDeniedException
     assertThrows(AccessDeniedException.class, () -> {
         adminService.deleteAll();
     });
@@ -421,7 +421,7 @@ void shouldDenyUser() {
 
 ---
 
-## 🛠️ Configurazione Keycloak
+## Keycloak Configuration
 
 ### 1. Realm Setup
 
@@ -464,7 +464,7 @@ Client Session Max: 10 hours
 
 ---
 
-## 🔑 Ottenere un Token JWT
+## Obtaining a JWT Token
 
 ### 1. Password Grant (Development)
 
@@ -494,19 +494,19 @@ curl -X POST http://localhost:8180/realms/nomecliente/protocol/openid-connect/to
 ### 2. Authorization Code Flow (Production)
 
 ```
-1. Frontend redirect to Keycloak:
+1. Frontend redirects to Keycloak:
    http://localhost:8180/realms/nomecliente/protocol/openid-connect/auth
      ?client_id=nomecliente-client
      &redirect_uri=http://localhost:4200/callback
      &response_type=code
      &scope=openid profile email
 
-2. User login in Keycloak
+2. User logs in via Keycloak
 
-3. Keycloak redirect con authorization code:
+3. Keycloak redirects with authorization code:
    http://localhost:4200/callback?code=abc123...
 
-4. Frontend exchange code for token:
+4. Frontend exchanges code for token:
    POST /token
    grant_type=authorization_code
    code=abc123...
@@ -515,9 +515,9 @@ curl -X POST http://localhost:8180/realms/nomecliente/protocol/openid-connect/to
 
 ---
 
-## 🚨 Gestione Errori Security
+## Security Error Handling
 
-### 401 Unauthorized - Token Mancante o Invalido
+### 401 Unauthorized — Missing or Invalid Token
 
 ```json
 {
@@ -528,13 +528,13 @@ curl -X POST http://localhost:8180/realms/nomecliente/protocol/openid-connect/to
 }
 ```
 
-**Cause comuni**:
-- Token non presente nell'header `Authorization`
-- Token scaduto (`exp` claim)
-- Token con firma invalida
-- Issuer non corrispondente
+**Common causes:**
+- `Authorization` header missing.
+- Expired token (`exp` claim).
+- Invalid token signature.
+- Issuer mismatch.
 
-### 403 Forbidden - Autorizzazione Insufficiente
+### 403 Forbidden — Insufficient Permissions
 
 ```json
 {
@@ -545,82 +545,74 @@ curl -X POST http://localhost:8180/realms/nomecliente/protocol/openid-connect/to
 }
 ```
 
-**Cause comuni**:
-- Utente autenticato ma senza il ruolo richiesto
-- `@PreAuthorize("hasRole('ADMIN')")` fallisce
-- Controllo custom di autorizzazione fallisce
+**Common causes:**
+- Authenticated user missing the required role.
+- `@PreAuthorize("hasRole('ADMIN')")` fails.
+- Custom authorisation check fails.
 
 ---
 
-## 📈 Best Practices
+## Best Practices
 
-### ✅ DO
+### DO
 
-1. **Valida sempre il JWT lato server**
-   - Non fidarti mai del token senza validazione
-   - Usa le chiavi pubbliche di Keycloak (JWK Set)
+1. **Always validate the JWT server-side** — never trust a token without validation; use Keycloak's public keys (JWK Set).
 
-2. **Usa SecurityContextHelper**
+2. **Use SecurityContextHelper**
    ```java
    String user = securityHelper.getCurrentUsername();
    entity.setCreateUser(user); // ✅
    ```
 
-3. **Stateless sessions**
-   - No `HttpSession`
-   - Ogni request contiene tutte le info (JWT)
+3. **Stateless sessions** — no `HttpSession`; every request carries all information (JWT).
 
-4. **Audit trail con utente reale**
+4. **Audit trail with real user**
    ```java
    entity.setLastUpdateUser(securityHelper.getCurrentUsername());
    ```
 
-5. **Proteggi endpoint sensibili**
+5. **Protect sensitive endpoints**
    ```java
    @PreAuthorize("hasRole('ADMIN')")
    ```
 
-### ❌ DON'T
+### DON'T
 
-1. **Non chiamare Keycloak per ogni request**
-   - ❌ Request → Keycloak verification → Response
-   - ✅ Request → Local JWT validation → Response
+1. **Do not call Keycloak on every request** — validate the JWT locally using cached public keys.
 
-2. **Non salvare password in chiaro**
-   - Keycloak gestisce le password
-   - Backend riceve solo JWT
+2. **Do not store passwords** — Keycloak manages passwords; the backend only receives JWT tokens.
 
-3. **Non usare utente hardcoded**
+3. **Do not use hardcoded users**
    ```java
    entity.setCreateUser("system"); // ❌
    entity.setCreateUser(securityHelper.getCurrentUsername()); // ✅
    ```
 
-4. **Non esporre endpoint senza protezione**
+4. **Do not expose endpoints without protection**
    ```java
    @RequestMapping("/api/admin")
-   // ❌ Manca @PreAuthorize
+   // ❌ Missing @PreAuthorize
    ```
 
-5. **Non loggare JWT completi**
+5. **Do not log full JWT tokens**
    ```java
-   log.info("Token: {}", jwt); // ❌ Security risk
-   log.info("User: {}", username); // ✅
+   log.info("Token: {}", jwt);      // ❌ Security risk
+   log.info("User: {}", username);  // ✅
    ```
 
 ---
 
-## 🔍 Debugging
+## Debugging
 
-### Verifica Token JWT
+### Verify a JWT Token
 
-**Usa jwt.io** per decodificare e verificare il token:
-1. Copia il token da Keycloak
-2. Vai su https://jwt.io
-3. Incolla il token
-4. Verifica claims e scadenza
+Use **jwt.io** to decode and verify a token:
+1. Copy the token from Keycloak.
+2. Open https://jwt.io.
+3. Paste the token.
+4. Verify claims and expiry.
 
-### Log Spring Security
+### Spring Security Logging
 
 ```yaml
 logging:
@@ -640,28 +632,26 @@ log.debug("Authorities: {}", auth.getAuthorities());
 
 ---
 
-## 📚 Riferimenti
+## References
 
 - **Spring Security**: https://spring.io/projects/spring-security
 - **OAuth2 Resource Server**: https://docs.spring.io/spring-security/reference/servlet/oauth2/resource-server/jwt.html
 - **Keycloak**: https://www.keycloak.org/documentation
 - **JWT RFC**: https://datatracker.ietf.org/doc/html/rfc7519
-- **SECURITY-JWT-KEYCLOAK.md**: Guida implementazione completa
 
 ---
 
-## ✅ Checklist Implementazione
+## Implementation Checklist
 
-- [x] Spring Security configurato
-- [x] OAuth2 Resource Server attivo
-- [x] JWT validation con Keycloak JWK
-- [x] CustomJwtAuthenticationToken per info utente
-- [x] SecurityContextHelper per accesso semplificato
-- [x] Audit trail con username reale
-- [x] Test compatibili con @WithMockUser
-- [x] Endpoint protection configurata
-- [x] Error handling per 401/403
-- [x] Documentazione completa
+- [ ] Spring Security configured
+- [ ] OAuth2 Resource Server active
+- [ ] JWT validation with Keycloak JWK
+- [ ] `CustomJwtAuthenticationToken` for user info
+- [ ] `SecurityContextHelper` for simplified access
+- [ ] Audit trail with real username
+- [ ] Tests compatible with `@WithMockUser`
+- [ ] Endpoint protection configured
+- [ ] Error handling for 401/403
+- [ ] Documentation up to date
 
-**🔐 Sistema di sicurezza production-ready implementato!**
-
+---
